@@ -1,33 +1,37 @@
+현재 구현된 **SC-Zero (v2.0.0)**의 기능과 보안 아키텍처를 완벽하게 반영한 `README.md`입니다.
+
+이 문서는 프로젝트의 정체성(보안 메신저), 기술 스택(Libp2p, PoW 블록체인), 그리고 보안 검증 메커니즘을 명확하게 설명합니다.
+
+---
+
 # SC-Zero : Secure Identity Messenger
 
 > **중앙 서버 없는, 블록체인 기반 신원 인증 P2P 메신저**
 > *Blockchain-based Identity Verification P2P Messenger*
 
-**SC-Zero**는 중앙 서버 없이 작동하는 탈중앙화 메신저입니다 
-단순한 P2P 통신을 넘어, **자체 블록체인(Self-Blockchain)**과 **작업 증명(PoW)** 기술을 도입하였습니다
-신원 위조(Spoofing)와 시빌 공격(Sybil Attack)을 원천 차단합니다
+**SC-Zero**는 중앙 서버 없이 작동하는 탈중앙화 메신저입니다. 단순한 P2P 통신을 넘어, **자체 블록체인(Self-Blockchain)**과 **작업 증명(PoW)** 기술을 도입하여 신원 위조(Spoofing)와 시빌 공격(Sybil Attack)을 원천 차단합니다.
 
 ## 🚀 Key Features (핵심 기능)
 
 * **🔒 Blockchain Identity (블록체인 신원 인증)**
-    * 모든 사용자는 접속 전 자신만의 **신원 블록(Identity Block)**을 채굴(Mining)해야 합니다
-    * **PoW (Proof of Work):** 해시 난이도(`000...`)를 만족해야 하므로 대량의 가짜 계정 생성을 방지합니다
-    * **Digital Signature:** 개인키로 서명된 블록만 네트워크에서 인정받습니다
+* 모든 사용자는 접속 전 자신만의 **신원 블록(Identity Block)**을 채굴(Mining)해야 합니다.
+* **PoW (Proof of Work):** 해시 난이도(`000...`)를 만족해야 하므로 대량의 가짜 계정 생성을 방지합니다.
+* **Digital Signature:** 개인키로 서명된 블록만 네트워크에서 인정받습니다.
 
 
 * **📡 P2P Gossip Protocol (가십 프로토콜)**
-    * 중앙 서버 없이 사용자 간에 서로의 신원 장부(Ledger)를 자동으로 동기화합니다
-    * 연결될 때마다 없는 블록을 서로 교환(`Request`/`Response`)하여 최신 상태를 유지합니다
+* 중앙 서버 없이 사용자 간에 서로의 신원 장부(Ledger)를 자동으로 동기화합니다.
+* 연결될 때마다 없는 블록을 서로 교환(`Request`/`Response`)하여 최신 상태를 유지합니다.
 
 
 * **🛡️ Military-Grade Security (강력한 보안)**
-    * **AES-256-GCM:** 로컬에 저장되는 신원 파일과 키 파일은 암호화되어 저장됩니다
-    * **End-to-End Encryption:** Libp2p의 보안 채널을 통해 모든 통신이 암호화됩니다
+* **AES-256-GCM:** 로컬에 저장되는 신원 파일과 키 파일은 암호화되어 저장됩니다.
+* **End-to-End Encryption:** Libp2p의 보안 채널을 통해 모든 통신이 암호화됩니다.
 
 
 * **🖥️ Modern TUI (터미널 UI)**
-    * `tview` 기반의 깔끔한 터미널 인터페이스를 제공합니다
-    * 실시간 로그 확인과 채팅이 동시에 가능합니다
+* `tview` 기반의 깔끔한 터미널 인터페이스를 제공합니다.
+* 실시간 로그 확인과 채팅이 동시에 가능합니다.
 
 
 
@@ -35,7 +39,7 @@
 
 ## 🛠 Architecture (아키텍처)
 
-SC-Zero는 **신뢰할 수 없는 네트워크(Trustless Network)**에서 상대를 검증하기 위해 다음과 같은 절차를 따릅니다
+SC-Zero는 **신뢰할 수 없는 네트워크(Trustless Network)**에서 상대를 검증하기 위해 다음과 같은 절차를 따릅니다.
 
 ```mermaid
 sequenceDiagram
@@ -90,6 +94,11 @@ SC-Zero/
 ### Installation
 
 ```bash
+# 1. 프로젝트 클론 및 이동
+git clone https://github.com/your-username/sc-zero.git
+cd sc-zero
+
+# 2. 의존성 설치
 go mod tidy
 
 ```
@@ -127,9 +136,9 @@ go run cmd/node/main.go
 
 ### Status Indicators
 
-* `[Verified Identity]` : 상대방의 블록이 수학적으로 검증됨
-* `[Unverified]` : 검증되지 않은 사용자의 메시지
-* `Synced Identity` : 가십 프로토콜을 통해 제3자의 신원을 동기화함
+* `[Verified Identity]` : 상대방의 블록이 수학적으로 검증됨 (안전).
+* `[Unverified]` : 검증되지 않은 사용자의 메시지 (주의).
+* `Synced Identity` : 가십 프로토콜을 통해 제3자의 신원을 동기화함.
 
 ---
 
@@ -137,11 +146,11 @@ go run cmd/node/main.go
 
 | 위협 (Threat) | 방어 기제 (Defense Mechanism) |
 | --- | --- |
-| **신원 도용 (Spoofing)** | **전자서명 (Digital Signature):** 개인키가 없으면 블록 생성 불가 |
-| **대량 가짜 계정 (Sybil)** | **작업 증명 (PoW):** 블록 생성 시 해시 연산 비용 강제 |
-| **데이터 변조 (Tampering)** | **해시 체인 & 서명:** 내용 변경 시 해시/서명 검증 실패 |
-| **중간자 공격 (MITM)** | **블록체인 검증:** 해커가 키를 바꿔치기해도 장부와 다르면 거부 |
-| **로컬 탈취 (Local Theft)** | **AES-256-GCM:** 물리적 파일 탈취 시 복호화 불가능 |
+| **신원 도용 (Spoofing)** | **전자서명 (Digital Signature):** 개인키가 없으면 블록 생성 불가. |
+| **대량 가짜 계정 (Sybil)** | **작업 증명 (PoW):** 블록 생성 시 해시 연산 비용 강제. |
+| **데이터 변조 (Tampering)** | **해시 체인 & 서명:** 내용 변경 시 해시/서명 검증 실패. |
+| **중간자 공격 (MITM)** | **블록체인 검증:** 해커가 키를 바꿔치기해도 장부와 다르면 거부. |
+| **로컬 탈취 (Local Theft)** | **AES-256-GCM:** 물리적 파일 탈취 시 복호화 불가능. |
 
 ---
 
@@ -153,3 +162,11 @@ go run cmd/node/main.go
 * [x] 보안 장부 동기화 (Gossip)
 * [ ] **친구 목록(Whitelist) 관리 기능** (스팸 방지)
 * [ ] **장부 용량 제한 (Garbage Collection)** (리소스 최적화)
+
+---
+
+### 💡 Next Step for User
+
+README 업데이트가 완료되었습니다! 이제 프로젝트의 방향성이 명확해졌습니다.
+
+아까 우려하셨던 **"쓰레기 장부(검증된 잡상인)가 쌓이는 문제"**를 해결하기 위해, 다음 단계로 **[장부 용량 제한 정책]**이나 **[친구 추가 기능]** 중 하나를 구현해보는 것은 어떨까요?

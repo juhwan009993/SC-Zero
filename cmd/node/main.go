@@ -2,98 +2,112 @@ package main
 
 import (
 	"bufio"
+	"context"
 	"fmt"
 	"os"
 	"strings"
 	"time"
 
-	"github.com/multiformats/go-multiaddr" // [추가됨] 주소 타입 사용을 위해 필요
-
-	"sc-zero/internal/core"
+	"sc-zero/internal/blockchain"
 	"sc-zero/internal/p2p"
 	"sc-zero/internal/storage"
 	"sc-zero/internal/ui"
+
+	"github.com/libp2p/go-libp2p/core/peer"
 )
 
 func main() {
-	// 1. 채널 생성 (모듈 간 통신용)
-	msgChan := make(chan string, 100) // UI -> P2P
-	logChan := make(chan string, 100) // P2P/System -> UI
+	// --- 1. 초기화 및 키 로드 ---
+	fmt.Println("========================================")
+	fmt.Println("   SC-Zero : Secure Identity Messenger  ")
+	fmt.Println("========================================")
 
-	// 2. 키 로드
-	privKey, err := storage.LoadOrGenerateKey(core.KeyFile)
+	privKey, err := storage.LoadOrGenerateKey()
+	if err != nil { panic(err) }
+
+	var myBlock *blockchain.IdentityBlock
+	myBlock, err = storage.LoadIdentitySecurely(privKey)
 	if err != nil {
-		panic(err)
+		fmt.Println("[Init] No existing identity found.")
+		fmt.Println("[Init] Mining new Identity Block (PoW)... This may take a few seconds.")
+		pid, _ := peer.IDFromPrivateKey(privKey)
+		myBlock, err = blockchain.CreateIdentityBlock(privKey, pid.String())
+		if err != nil { panic(err) }
+		storage.SaveIdentitySecurely(privKey, myBlock)
+		fmt.Printf("[Init] Identity Mined! Hash: %s\n", myBlock.Hash)
+	} else {
+		fmt.Printf("[Init] Identity Loaded! Hash: %s\n", myBlock.Hash)
 	}
 
-	// 3. P2P 매니저 초기화
-	node, err := p2p.NewP2PManager(privKey, msgChan, logChan)
-	if err != nil {
-		panic(err)
-	}
+	// --- 2. P2P 매니저 생성 ---
+	msgChan := make(chan string, 100)
+	logChan := make(chan string, 100)
+
+	node, err := p2p.NewP2PManager(privKey, msgChan, logChan, myBlock)
+	if err != nil { panic(err) }
 	defer node.Host.Close()
 
-	// 4. CLI 모드 (초기 정보 출력 및 모드 선택)
-	printBanner(node.Host.ID().String(), node.Host.Addrs())
+	// --- 3. 주소 출력 ---
+	fmt.Println("\n[ My Node Addresses ]")
+	for _, addr := range node.Host.Addrs() {
+		fmt.Printf("- %s/p2p/%s\n", addr, node.Host.ID())
+	}
+	fmt.Println("----------------------------------------")
+
+	// --- 4. [핵심 변경] 모드 선택 (CLI) ---
+	reader := bufio.NewReader(os.Stdin)
 	
-	startMode, targetAddr := selectMode()
-
-	// 5. UI 매니저 초기화 및 실행
-	tui := ui.NewTUIManager(privKey, msgChan, logChan)
-	tui.Init()
-
-	// 초기 상태 로그 전송
-	logChan <- "[System] SC-Zero TUI Started."
-	logChan <- fmt.Sprintf("[System] Status: %s", startMode)
-
-	// 연결 시도 (비동기)
-	if targetAddr != "" {
-		go func() {
-			time.Sleep(1 * time.Second)
-			node.Connect(targetAddr)
-		}()
-	}
-
-	// 앱 실행 (Blocking)
-	if err := tui.Run(); err != nil {
-		panic(err)
-	}
-}
-
-// CLI 헬퍼 함수들
-// [수정됨] addrs의 타입을 []interface{}에서 []multiaddr.Multiaddr로 변경
-func printBanner(id string, addrs []multiaddr.Multiaddr) {
-	fmt.Println("====================================================")
-	fmt.Println("       SC-Zero : Modular TUI Edition")
-	fmt.Println("====================================================")
-	fmt.Printf("Node ID : %s\n", id)
-	fmt.Println("My Addresses:")
-	for _, addr := range addrs {
-		fmt.Printf(" - %s/p2p/%s\n", addr, id)
-	}
-	fmt.Println("----------------------------------------------------")
-}
-
-func selectMode() (string, string) {
-	scanner := bufio.NewScanner(os.Stdin)
 	for {
-		fmt.Println("\n[Mode Selection]")
-		fmt.Println("1. Wait (Listen)")
-		fmt.Println("2. Connect (Dial)")
-		fmt.Print("Select> ")
+		fmt.Println("\nSelect Mode:")
+		fmt.Println("1. Wait for connection (Listen)")
+		fmt.Println("2. Connect to peer")
+		fmt.Print("Choice> ")
 		
-		if !scanner.Scan() { return "", "" }
-		choice := strings.TrimSpace(scanner.Text())
+		choice, _ := reader.ReadString('\n')
+		choice = strings.TrimSpace(choice)
 
 		if choice == "1" {
-			return "Listening...", ""
+			// 대기 모드: 바로 TUI 진입
+			fmt.Println("Entering Wait Mode...")
+			time.Sleep(1 * time.Second)
+			break 
 		} else if choice == "2" {
-			fmt.Print("Target Address> ")
-			if !scanner.Scan() { return "", "" }
-			addr := strings.TrimSpace(scanner.Text())
-			if addr != "" {
-				return "Connecting...", addr
+			// 연결 모드: 주소 입력 받기
+			fmt.Print("Enter Target Address: ")
+			target, _ := reader.ReadString('\n')
+			target = strings.TrimSpace(target)
+
+			if target == "" {
+				fmt.Println("[!] Address cannot be empty.")
+				continue
 			}
+
+			fmt.Printf("Connecting to %s...\n", target)
+			
+			// 연결 시도 (여기서 멈춤)
+			ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+			err := node.Connect(ctx, target)
+			cancel()
+
+			if err != nil {
+				fmt.Printf("[!] Connection Failed: %v\n", err)
+				fmt.Println("Please try again.")
+				continue // 다시 메뉴로 돌아감
+			} else {
+				fmt.Println("[+] Connected successfully!")
+				time.Sleep(1 * time.Second)
+				break // 루프 탈출 -> TUI 진입
+			}
+		} else {
+			fmt.Println("[!] Invalid choice.")
 		}
+	}
+
+	// --- 5. TUI 실행 ---
+	tui := ui.NewTUIManager(msgChan, logChan)
+	tui.Init(node)
+
+	if err := tui.Run(); err != nil {
+		panic(err)
 	}
 }
