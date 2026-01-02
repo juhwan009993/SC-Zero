@@ -1,0 +1,14 @@
+# Security
+identity.key
+chat_history.enc
+
+# OS Specific
+.DS_Store
+Thumbs.db
+
+# Go
+/bin/
+/dist/
+*.exe
+*.test
+*.out
