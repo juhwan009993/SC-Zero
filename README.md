@@ -121,6 +121,7 @@ go run cmd/node/main.go
 
 ### TUI Commands
 
+* `/help` : 사용 가능한 모든 명령어와 설명을 표시합니다.
 * `/connect <address>` : 상대방 노드에 연결하고 신원 인증을 수행합니다.
 * `/exit` : 프로그램을 안전하게 종료합니다.
 * (채팅 입력) : 연결된 모든 **검증된 피어(Verified Peer)**에게 메시지를 전송합니다.
